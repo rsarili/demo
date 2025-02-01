@@ -6,9 +6,13 @@ build:
 	cd $(SERVER_SRC) && go build
 
 .PHONY: run-server
-run:
+run-server:
 	cd $(SERVER_SRC) && go run main.go
 
+.PHONY: format
+format:
+	cd $(SERVER_SRC) && go fmt
+	cd $(CLIENT_SRC) && cargo fmt
 
 .PHONY: build-client
 build-client:
