@@ -1,17 +1,17 @@
 VERSION:=0.1
 
-.PHONY: build-server
+.PHONY: build
 build:
 	go build
 
-.PHONY: run-server
-run-server:
+.PHONY: run
+run:
 	go run main.go
 
 .PHONY: format
 format:
 	go fmt
 	
-.PHONY: build-image
-build-image:
+.PHONY: image
+image:
 	docker build --tag go-server:v${VERSION} .

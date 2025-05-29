@@ -3,10 +3,10 @@
 format:
 	cargo fmt
 
-.PHONY: build-client
-build-client:
+.PHONY: build
+build:
 	cargo build
 
-.PHONY: run-client
-run-client:
+.PHONY: run
+run:
 	cargo run
