@@ -2,8 +2,8 @@ package main
 
 import (
 	"github.com/aws/aws-cdk-go/awscdk/v2"
+	"github.com/aws/aws-cdk-go/awscdk/v2/awscloudwatch"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awslambda"
-
 	"github.com/aws/constructs-go/constructs/v10"
 	"github.com/aws/jsii-runtime-go"
 )
@@ -19,11 +19,25 @@ func NewInfraStack(scope constructs.Construct, id string, props *InfraStackProps
 	}
 	stack := awscdk.NewStack(scope, &id, &sprops)
 
-	awslambda.NewFunction(stack, jsii.String("SampleFunction"), &awslambda.FunctionProps{
+	function := awslambda.NewFunction(stack, jsii.String("SampleFunction"), &awslambda.FunctionProps{
 		Runtime:      awslambda.Runtime_PYTHON_3_13(),
 		Handler:      jsii.String("handler.handler"),
 		FunctionName: jsii.String("hello-world-2"),
-		Code:         awslambda.Code_FromAsset(jsii.String("../src/lambda/hello_world/dist"), nil),
+		Code:         awslambda.Code_FromAsset(jsii.String("../src/lambda/hello_world/dist"), nil),	
+	})
+
+	widget := awscloudwatch.NewLogQueryWidget(&awscloudwatch.LogQueryWidgetProps{
+		LogGroupNames: &[]*string{function.LogGroup().LogGroupName()},
+		QueryLines: &[]*string{jsii.String("filter level=\"ERROR\""),
+			jsii.String("fields request_id, @timestamp, @message, @logStream, @log"),
+			jsii.String("sort @timestamp desc"),
+			jsii.String("limit 10000")},
+		Width: jsii.Number(24),
+	})
+
+	awscloudwatch.NewDashboard(stack, jsii.String("Dashboard"), &awscloudwatch.DashboardProps{
+		DashboardName: jsii.String("Demo-Dashboard"),
+		Widgets:       &[]*[]awscloudwatch.IWidget{{widget}},
 	})
 
 	return stack
