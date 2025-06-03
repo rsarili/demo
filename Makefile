@@ -12,7 +12,7 @@ package-lambda:
 	poetry export --format=requirements.txt > requirements.lambda.txt; \
 	rm -rf dist; \
 	poetry run pip install --target dist -r requirements.lambda.txt; \
-	cp handler.py dist
+	rsync -av --exclude='dist' --exclude='.venv' . dist/
 
 .PHONY: run-lambda
 run-lambda:
