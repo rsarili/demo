@@ -23,7 +23,7 @@ func NewInfraStack(scope constructs.Construct, id string, props *InfraStackProps
 		Runtime:      awslambda.Runtime_PYTHON_3_13(),
 		Handler:      jsii.String("handler.handler"),
 		FunctionName: jsii.String("hello-world-2"),
-		Code:         awslambda.Code_FromAsset(jsii.String("../src/lambda/hello_world/"), nil),
+		Code:         awslambda.Code_FromAsset(jsii.String("../src/lambda/hello_world/dist"), nil),
 	})
 
 	return stack
