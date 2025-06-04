@@ -1,10 +1,12 @@
 INFRA:=infra
 LAMBDA:='src/lambda/hello_world'
+USER:=$(shell whoami)
+
+CONTEXT=--context stage=${USER}
 
 .PHONY: deploy
 deploy: package-lambda
-	cd ${INFRA}; make deploy
-
+	cd ${INFRA}; cdk deploy ${CONTEXT}
 
 .PHONY: package-lambda
 package-lambda:

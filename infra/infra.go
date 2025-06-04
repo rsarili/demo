@@ -10,32 +10,33 @@ import (
 )
 
 type InfraStackProps struct {
+	Stage string
 	awscdk.StackProps
 }
 
-func NewInfraStack(scope constructs.Construct, id string, props *InfraStackProps) awscdk.Stack {
-	var sprops awscdk.StackProps
-	if props != nil {
-		sprops = props.StackProps
-	}
-	stack := awscdk.NewStack(scope, &id, &sprops)
+func NewInfraStack(scope constructs.Construct, props InfraStackProps) awscdk.Stack {
+	stack_name := "iot-demo-" + props.Stage
+	stack := awscdk.NewStack(scope, &stack_name, &props.StackProps)
 
 	function := awslambda.NewFunction(stack, jsii.String("SampleFunction"), &awslambda.FunctionProps{
 		Runtime:      awslambda.Runtime_PYTHON_3_13(),
 		Handler:      jsii.String("handler.handler"),
-		FunctionName: jsii.String("hello-world-2"),
+		FunctionName: getResourceName(stack_name, "sample"),
 		Code:         awslambda.Code_FromAsset(jsii.String("../src/lambda/hello_world/dist"), nil),
 	})
 
 	gateway_handler_function := awslambda.NewFunction(stack, jsii.String("GatewayFunction"), &awslambda.FunctionProps{
 		Runtime:      awslambda.Runtime_PYTHON_3_13(),
 		Handler:      jsii.String("gateway_handler.handler"),
-		FunctionName: jsii.String("gateway-handler"),
+		FunctionName: getResourceName(stack_name, "gateway"),
 		Code:         awslambda.Code_FromAsset(jsii.String("../src/lambda/hello_world/dist"), nil),
 	})
 
 	rest_api := awsapigateway.NewRestApi(stack, jsii.String("RestApi"), &awsapigateway.RestApiProps{
-		RestApiName: jsii.String("Demo-RestApi"),
+		RestApiName: getResourceName(stack_name, "api"),
+		DeployOptions: &awsapigateway.StageOptions{
+			StageName: jsii.String("v1"),
+		},
 	})
 
 	rest_api.Root().AddResource(
@@ -54,8 +55,13 @@ func NewInfraStack(scope constructs.Construct, id string, props *InfraStackProps
 	})
 
 	awscloudwatch.NewDashboard(stack, jsii.String("Dashboard"), &awscloudwatch.DashboardProps{
-		DashboardName: jsii.String("Demo-Dashboard"),
+		DashboardName: getResourceName(stack_name, "dashboard"),
 		Widgets:       &[]*[]awscloudwatch.IWidget{{widget}},
+	})
+
+	awscdk.NewCfnOutput(stack, jsii.String("ApiEndpoint"), &awscdk.CfnOutputProps{
+		Value: rest_api.Url(),
+		ExportName: getResourceName(stack_name, "api-endpoint"),
 	})
 
 	return stack
@@ -66,13 +72,18 @@ func main() {
 
 	app := awscdk.NewApp(nil)
 
-	NewInfraStack(app, "InfraStack", &InfraStackProps{
-		awscdk.StackProps{
+	NewInfraStack(app, InfraStackProps{
+		Stage: app.Node().TryGetContext(jsii.String("stage")).(string),
+		StackProps: awscdk.StackProps{
 			Env: env(),
 		},
 	})
 
 	app.Synth(nil)
+}
+
+func getResourceName(stackName, lamdaName string) *string {
+	return jsii.String(stackName + "-" + lamdaName)
 }
 
 // env determines the AWS environment (account+region) in which our stack is to
