@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/aws/aws-cdk-go/awscdk/v2"
+	"github.com/aws/aws-cdk-go/awscdk/v2/awsapigateway"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awscloudwatch"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awslambda"
 	"github.com/aws/constructs-go/constructs/v10"
@@ -23,12 +24,29 @@ func NewInfraStack(scope constructs.Construct, id string, props *InfraStackProps
 		Runtime:      awslambda.Runtime_PYTHON_3_13(),
 		Handler:      jsii.String("handler.handler"),
 		FunctionName: jsii.String("hello-world-2"),
-		Code:         awslambda.Code_FromAsset(jsii.String("../src/lambda/hello_world/dist"), nil),	
+		Code:         awslambda.Code_FromAsset(jsii.String("../src/lambda/hello_world/dist"), nil),
 	})
 
+	gateway_handler_function := awslambda.NewFunction(stack, jsii.String("GatewayFunction"), &awslambda.FunctionProps{
+		Runtime:      awslambda.Runtime_PYTHON_3_13(),
+		Handler:      jsii.String("gateway_handler.handler"),
+		FunctionName: jsii.String("gateway-handler"),
+		Code:         awslambda.Code_FromAsset(jsii.String("../src/lambda/hello_world/dist"), nil),
+	})
+
+	rest_api := awsapigateway.NewRestApi(stack, jsii.String("RestApi"), &awsapigateway.RestApiProps{
+		RestApiName: jsii.String("Demo-RestApi"),
+	})
+
+	rest_api.Root().AddResource(
+		jsii.String("todos"), nil).AddMethod(jsii.String("GET"),
+		awsapigateway.NewLambdaIntegration(gateway_handler_function, nil),
+		nil)
+
 	widget := awscloudwatch.NewLogQueryWidget(&awscloudwatch.LogQueryWidgetProps{
-		LogGroupNames: &[]*string{function.LogGroup().LogGroupName()},
-		QueryLines: &[]*string{jsii.String("filter level=\"ERROR\""),
+		LogGroupNames: &[]*string{function.LogGroup().LogGroupName(), gateway_handler_function.LogGroup().LogGroupName()},
+		QueryLines: &[]*string{
+			jsii.String("filter level=\"ERROR\""),
 			jsii.String("fields request_id, @timestamp, @message, @logStream, @log"),
 			jsii.String("sort @timestamp desc"),
 			jsii.String("limit 10000")},
