@@ -17,20 +17,22 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const stackName = "iot-demo"
+
 func TestSuccess(t *testing.T) {
 	var ApiGatewayUrl string = GetApiEndpoint()
-	
+
 	requestBody := []byte(`{
 		"title": "Post title",
 		"body": "Post description",
 		"userId": 1
 		}`)
 	log.Printf("POST %s", ApiGatewayUrl)
-	resp, err := http.Post(ApiGatewayUrl + "todos", "application/json",bytes.NewBuffer(requestBody))
+	resp, err := http.Post(ApiGatewayUrl+"/todos", "application/json", bytes.NewBuffer(requestBody))
 	if err != nil {
 		log.Fatalf("failure")
 	}
-	assert.Equal(t, resp.StatusCode, 201)
+	assert.Equal(t, resp.StatusCode, http.StatusCreated)
 
 	defer resp.Body.Close()
 	responseBody, _ := io.ReadAll(resp.Body)
@@ -51,11 +53,11 @@ func TestServerError(t *testing.T) {
 
 	log.Printf("POST %s", ApiGatewayUrl)
 	log.Printf("userId %d", userId)
-	resp, err := http.Post(ApiGatewayUrl + "todos", "application/json",bytes.NewBuffer(requestBody))
+	resp, err := http.Post(ApiGatewayUrl+"/todos", "application/json", bytes.NewBuffer(requestBody))
 	if err != nil {
 		log.Fatalf("failure")
 	}
-	assert.Equal(t, resp.StatusCode, 502)
+	assert.Equal(t, resp.StatusCode, http.StatusBadGateway)
 
 	defer resp.Body.Close()
 	responseBody, _ := io.ReadAll(resp.Body)
@@ -65,14 +67,8 @@ func TestServerError(t *testing.T) {
 }
 
 func GetApiEndpoint() string {
-	user, err := user.Current()
-	log.Printf("username: %s", user.Username)
-	if err != nil {
-		log.Fatalf("unable to get username, %v", err)
-	}
-
-	stackName := "iot-demo-" + user.Username
-	apiUrlExportName := "iot-demo-" + user.Username + "-api-endpoint"
+	fullStackName := getFullStackName()
+	apiUrlExportName := fullStackName + "-api-endpoint"
 
 	cfg, err := config.LoadDefaultConfig(context.TODO())
 	if err != nil {
@@ -81,7 +77,7 @@ func GetApiEndpoint() string {
 	client := cloudformation.NewFromConfig(cfg)
 
 	stackOutput, err := client.DescribeStacks(context.TODO(), &cloudformation.DescribeStacksInput{
-		StackName: &stackName,
+		StackName: &fullStackName,
 	})
 
 	if err != nil {
@@ -98,4 +94,16 @@ func GetApiEndpoint() string {
 		log.Fatalf("can not found api gateway url")
 	}
 	return *ApiGatewayUrl
+}
+
+func getFullStackName() string {
+	user, err := user.Current()
+	if err != nil {
+		log.Fatalf("unable to get username, %v", err)
+	}
+
+	fullStackName := fmt.Sprintf("%s-%s", stackName, user.Username)
+	log.Printf("stack name: %s", fullStackName)
+
+	return fullStackName
 }

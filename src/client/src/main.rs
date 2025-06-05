@@ -4,8 +4,26 @@ use reqwest::blocking::Response;
 use reqwest::Error;
 use std::thread;
 use std::time::Duration;
+use std::{io, io::Write};
+use std::process;
 
 fn main() -> Result<(), Error> {
+
+    loop {
+        print!("Enter command: ");
+        io::stdout().flush().unwrap();
+
+        let mut input = String::new();
+        io::stdin().read_line(&mut input).unwrap();
+        let command = input.trim();
+
+        match command {
+            "continue" => break,
+            "exit" => process::exit(0),
+            _ => println!("Unknown command: {}", command),
+        }
+    }
+
     let mut handles = vec![];
 
     for _ in 0..10 {
