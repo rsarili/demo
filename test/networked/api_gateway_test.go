@@ -1,9 +1,12 @@
 package networked
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"log"
+	"math/rand/v2"
 	"net/http"
 	"os/user"
 	"testing"
@@ -14,21 +17,51 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSample(t *testing.T) {
+func TestSuccess(t *testing.T) {
 	var ApiGatewayUrl string = GetApiEndpoint()
-	log.Printf("sending request to %s", ApiGatewayUrl)
-
-	resp, err := http.Get(ApiGatewayUrl + "todos")
+	
+	requestBody := []byte(`{
+		"title": "Post title",
+		"body": "Post description",
+		"userId": 1
+		}`)
+	log.Printf("POST %s", ApiGatewayUrl)
+	resp, err := http.Post(ApiGatewayUrl + "todos", "application/json",bytes.NewBuffer(requestBody))
 	if err != nil {
 		log.Fatalf("failure")
 	}
-	assert.Equal(t, resp.StatusCode, 200)
+	assert.Equal(t, resp.StatusCode, 201)
 
 	defer resp.Body.Close()
-	body, _ := io.ReadAll(resp.Body)
+	responseBody, _ := io.ReadAll(resp.Body)
 
 	log.Println(resp.StatusCode)
-	log.Println(string(body))
+	log.Println(string(responseBody))
+}
+
+func TestServerError(t *testing.T) {
+	var ApiGatewayUrl string = GetApiEndpoint()
+	userId := rand.IntN(10000)
+	requestBody := []byte(fmt.Sprintf(`{
+		"title": "Post title",
+		"body": "Post description",
+		"userId": %d,
+		"error": 500
+		}`, userId))
+
+	log.Printf("POST %s", ApiGatewayUrl)
+	log.Printf("userId %d", userId)
+	resp, err := http.Post(ApiGatewayUrl + "todos", "application/json",bytes.NewBuffer(requestBody))
+	if err != nil {
+		log.Fatalf("failure")
+	}
+	assert.Equal(t, resp.StatusCode, 502)
+
+	defer resp.Body.Close()
+	responseBody, _ := io.ReadAll(resp.Body)
+
+	log.Println(resp.StatusCode)
+	log.Println(string(responseBody))
 }
 
 func GetApiEndpoint() string {

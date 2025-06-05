@@ -40,7 +40,7 @@ func NewInfraStack(scope constructs.Construct, props InfraStackProps) awscdk.Sta
 	})
 
 	rest_api.Root().AddResource(
-		jsii.String("todos"), nil).AddMethod(jsii.String("GET"),
+		jsii.String("todos"), nil).AddMethod(jsii.String("POST"),
 		awsapigateway.NewLambdaIntegration(gateway_handler_function, nil),
 		nil)
 
@@ -48,7 +48,7 @@ func NewInfraStack(scope constructs.Construct, props InfraStackProps) awscdk.Sta
 		LogGroupNames: &[]*string{function.LogGroup().LogGroupName(), gateway_handler_function.LogGroup().LogGroupName()},
 		QueryLines: &[]*string{
 			jsii.String("filter level=\"ERROR\""),
-			jsii.String("fields request_id, @timestamp, @message, @logStream, @log"),
+			jsii.String("fields user_id, @timestamp, @message, @logStream, @log"),
 			jsii.String("sort @timestamp desc"),
 			jsii.String("limit 10000")},
 		Width: jsii.Number(24),
