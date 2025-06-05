@@ -23,3 +23,8 @@ run-lambda:
 .PHONY: tail-lambda
 tail-lambda:
 	aws logs tail /aws/lambda/hello-world-2 --follow
+
+
+.PHONY: test
+test:
+	cd test/networked; go test

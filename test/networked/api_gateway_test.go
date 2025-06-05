@@ -37,7 +37,7 @@ func GetApiEndpoint() string {
 	if err != nil {
 		log.Fatalf("unable to get username, %v", err)
 	}
-	
+
 	stackName := "iot-demo-" + user.Username
 	apiUrlExportName := "iot-demo-" + user.Username + "-api-endpoint"
 
