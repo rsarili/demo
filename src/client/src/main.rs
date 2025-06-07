@@ -1,12 +1,8 @@
-use rand::Rng;
 use reqwest::blocking::get;
 use reqwest::blocking::Client;
 use reqwest::blocking::Response;
 use reqwest::Error;
 use std::collections::HashMap;
-use std::process;
-use std::thread;
-use std::time::Duration;
 use std::{io, io::Write};
 
 fn main() -> Result<(), Error> {
