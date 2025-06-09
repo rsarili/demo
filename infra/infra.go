@@ -4,8 +4,10 @@ import (
 	"github.com/aws/aws-cdk-go/awscdk/v2"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsapigateway"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awscloudwatch"
+	"github.com/aws/aws-cdk-go/awscdk/v2/awsiot"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awslambda"
 	"github.com/aws/constructs-go/constructs/v10"
+
 	"github.com/aws/jsii-runtime-go"
 )
 
@@ -60,8 +62,22 @@ func NewInfraStack(scope constructs.Construct, props InfraStackProps) awscdk.Sta
 	})
 
 	awscdk.NewCfnOutput(stack, jsii.String("ApiEndpoint"), &awscdk.CfnOutputProps{
-		Value: rest_api.Url(),
+		Value:      rest_api.Url(),
 		ExportName: getResourceName(stack_name, "api-endpoint"),
+	})
+
+	awsiot.NewCfnPolicy(stack, jsii.String("IotCorePolicy"), &awsiot.CfnPolicyProps{
+		PolicyDocument: map[string]interface{}{
+			"Version": "2012-10-17",
+			"Statement": []map[string]interface{}{
+				{
+					"Effect":   "Allow",
+					"Action":   []string{"iot:Publish", "iot:Connect", "iot:Subscribe", "iot:Receive"},
+					"Resource": []string{"*"},
+				},
+			},
+		},
+		PolicyName: jsii.String("IotDevicePolicy"),
 	})
 
 	return stack
