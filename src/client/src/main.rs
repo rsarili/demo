@@ -123,19 +123,19 @@ fn publish(client: Client) {
     }
 }
 
-fn listen_mqtt(connection:&mut rumqttc::Connection) {
+fn listen_mqtt(connection: &mut rumqttc::Connection) {
     for (i, notification) in connection.iter().enumerate() {
-    match notification {
-        Ok(notif) => {
-            println!("{i}. Notification = {notif:?}");
-            if let rumqttc::Event::Incoming(Packet::Publish(p)) = notif {
-                println!("Incoming message: {}", String::from_utf8_lossy(&p.payload));
+        match notification {
+            Ok(notif) => {
+                println!("{i}. Notification = {notif:?}");
+                if let rumqttc::Event::Incoming(Packet::Publish(p)) = notif {
+                    println!("Incoming message: {}", String::from_utf8_lossy(&p.payload));
+                }
+            }
+            Err(error) => {
+                println!("{i}. Notification = {error:?}");
+                return;
             }
         }
-        Err(error) => {
-            println!("{i}. Notification = {error:?}");
-            return;
-        }
     }
-}
 }
