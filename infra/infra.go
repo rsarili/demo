@@ -4,6 +4,7 @@ import (
 	"github.com/aws/aws-cdk-go/awscdk/v2"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsapigateway"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awscloudwatch"
+	"github.com/aws/aws-cdk-go/awscdk/v2/awsiam"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsiot"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awslambda"
 	"github.com/aws/constructs-go/constructs/v10"
@@ -20,11 +21,19 @@ func NewInfraStack(scope constructs.Construct, props InfraStackProps) awscdk.Sta
 	stack_name := "iot-demo-" + props.Stage
 	stack := awscdk.NewStack(scope, &stack_name, &props.StackProps)
 
-	function := awslambda.NewFunction(stack, jsii.String("SampleFunction"), &awslambda.FunctionProps{
-		Runtime:      awslambda.Runtime_PYTHON_3_13(),
-		Handler:      jsii.String("handler.handler"),
-		FunctionName: getResourceName(stack_name, "sample"),
-		Code:         awslambda.Code_FromAsset(jsii.String("../src/lambda/hello_world/dist"), nil),
+	policyName := "IotDevicePolicy"
+	awsiot.NewCfnPolicy(stack, jsii.String("IotCorePolicy"), &awsiot.CfnPolicyProps{
+		PolicyDocument: map[string]interface{}{
+			"Version": "2012-10-17",
+			"Statement": []map[string]interface{}{
+				{
+					"Effect":   "Allow",
+					"Action":   []string{"iot:Publish", "iot:Connect", "iot:Subscribe", "iot:Receive"},
+					"Resource": []string{"*"},
+				},
+			},
+		},
+		PolicyName: &policyName,
 	})
 
 	gateway_handler_function := awslambda.NewFunction(stack, jsii.String("GatewayFunction"), &awslambda.FunctionProps{
@@ -32,7 +41,17 @@ func NewInfraStack(scope constructs.Construct, props InfraStackProps) awscdk.Sta
 		Handler:      jsii.String("gateway_handler.handler"),
 		FunctionName: getResourceName(stack_name, "gateway"),
 		Code:         awslambda.Code_FromAsset(jsii.String("../src/lambda/hello_world/dist"), nil),
+		Environment: &map[string]*string{
+			"POLICY_NAME": &policyName,
+		},
 	})
+	gateway_handler_function.Role().AddToPrincipalPolicy(awsiam.NewPolicyStatement(
+		&awsiam.PolicyStatementProps{
+			Effect:  awsiam.Effect_ALLOW,
+			Actions: &[]*string{jsii.String("iot:CreateKeysAndCertificate"), jsii.String("iot:AttachPolicy")},
+			Resources: &[]*string{jsii.String("*")},
+		},
+	))
 
 	rest_api := awsapigateway.NewRestApi(stack, jsii.String("RestApi"), &awsapigateway.RestApiProps{
 		RestApiName: getResourceName(stack_name, "api"),
@@ -45,9 +64,13 @@ func NewInfraStack(scope constructs.Construct, props InfraStackProps) awscdk.Sta
 		jsii.String("todos"), nil).AddMethod(jsii.String("POST"),
 		awsapigateway.NewLambdaIntegration(gateway_handler_function, nil),
 		nil)
+	rest_api.Root().AddResource(
+		jsii.String("certificates"), nil).AddMethod(jsii.String("POST"),
+		awsapigateway.NewLambdaIntegration(gateway_handler_function, nil),
+		nil)
 
 	widget := awscloudwatch.NewLogQueryWidget(&awscloudwatch.LogQueryWidgetProps{
-		LogGroupNames: &[]*string{function.LogGroup().LogGroupName(), gateway_handler_function.LogGroup().LogGroupName()},
+		LogGroupNames: &[]*string{gateway_handler_function.LogGroup().LogGroupName()},
 		QueryLines: &[]*string{
 			jsii.String("filter level=\"ERROR\""),
 			jsii.String("fields user_id, @timestamp, @message, @logStream, @log"),
@@ -64,20 +87,6 @@ func NewInfraStack(scope constructs.Construct, props InfraStackProps) awscdk.Sta
 	awscdk.NewCfnOutput(stack, jsii.String("ApiEndpoint"), &awscdk.CfnOutputProps{
 		Value:      rest_api.Url(),
 		ExportName: getResourceName(stack_name, "api-endpoint"),
-	})
-
-	awsiot.NewCfnPolicy(stack, jsii.String("IotCorePolicy"), &awsiot.CfnPolicyProps{
-		PolicyDocument: map[string]interface{}{
-			"Version": "2012-10-17",
-			"Statement": []map[string]interface{}{
-				{
-					"Effect":   "Allow",
-					"Action":   []string{"iot:Publish", "iot:Connect", "iot:Subscribe", "iot:Receive"},
-					"Resource": []string{"*"},
-				},
-			},
-		},
-		PolicyName: jsii.String("IotDevicePolicy"),
 	})
 
 	return stack

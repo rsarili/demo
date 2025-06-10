@@ -48,6 +48,10 @@ fn main() -> () {
                 let response = ping_server();
                 println!("Response: {}", response);
             }
+            "create_certificate" => {
+                println!("Creating certificate...");
+                create_certificate();
+            }
             "post" => {
                 println!("Sending post request to server...");
                 let response = post_server();
@@ -89,6 +93,21 @@ fn post_server() -> String {
     let response = client.post(url).json(&body).send().unwrap();
 
     return response.text().unwrap();
+}
+
+fn create_certificate () {
+    let mut body = HashMap::new();
+
+    body.insert("name", "John Doe");
+    body.insert("age", "30");
+
+    let url: &str = "<endpoint>/certificates";
+
+    let client = reqwest::blocking::Client::new();
+    let response = client.post(url).json(&body).send().unwrap();
+    
+
+    println!("Response: {}", response.text().unwrap());
 }
 
 fn read(path: &str) -> Vec<u8> {
