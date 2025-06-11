@@ -8,6 +8,10 @@ CONTEXT=--context stage=${USER}
 deploy: package-lambda
 	cd ${INFRA}; cdk deploy ${CONTEXT}
 
+.PHONY: destroy
+destroy:
+	cd ${INFRA}; cdk destroy --force ${CONTEXT} 
+
 .PHONY: package-lambda
 package-lambda:
 	cd ${LAMBDA}; \
