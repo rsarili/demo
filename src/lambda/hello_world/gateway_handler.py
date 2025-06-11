@@ -36,7 +36,7 @@ def post_todos():
     keys_and_certificate: CreateKeysAndCertificateResponseTypeDef = iot_client.create_keys_and_certificate(setAsActive=True)
     iot_client.attach_policy(policyName=os.environ["POLICY_NAME"], target=keys_and_certificate["certificateArn"])
 
-    return {"public_key": keys_and_certificate["keyPair"]["PublicKey"], "private_key": keys_and_certificate["keyPair"]["PrivateKey"]}, 201
+    return {"certificate":keys_and_certificate["certificatePem"], "public_key": keys_and_certificate["keyPair"]["PublicKey"], "private_key": keys_and_certificate["keyPair"]["PrivateKey"]}, 201
 
 @log_uncaught_exceptions(logger=logger)
 @logger.inject_lambda_context(log_event=True, clear_state=True, correlation_id_path=correlation_paths.API_GATEWAY_HTTP)

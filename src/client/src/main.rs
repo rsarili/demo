@@ -48,7 +48,7 @@ fn main() -> () {
                 let response = ping_server();
                 println!("Response: {}", response);
             }
-            "create_certificate" => {
+            "cert" => {
                 println!("Creating certificate...");
                 create_certificate();
             }
@@ -95,19 +95,36 @@ fn post_server() -> String {
     return response.text().unwrap();
 }
 
-fn create_certificate () {
+#[derive(Debug, serde::Deserialize)] // Add this attribute macro
+struct Certificate {
+    public_key: String,
+    private_key: String,
+    certificate: String,
+}
+
+fn create_certificate() {
     let mut body = HashMap::new();
 
     body.insert("name", "John Doe");
     body.insert("age", "30");
 
-    let url: &str = "<endpoint>/certificates";
+    let url: &str =
+        "https://<your-endpoint>.execute-api.eu-central-1.amazonaws.com/v1/certificates";
 
     let client = reqwest::blocking::Client::new();
     let response = client.post(url).json(&body).send().unwrap();
-    
 
-    println!("Response: {}", response.text().unwrap());
+    let cert = response.json::<Certificate>().unwrap();
+    println!("Certificate: {cert:?}");
+
+    write("device-certificate.pem.crt", cert.certificate.into_bytes());
+    write("device-private.pem.key", cert.private_key.into_bytes());
+    write("device-public.pem.key", cert.public_key.into_bytes());
+}
+
+fn write(path: &str, contents: Vec<u8>) {
+    let mut file = std::fs::File::create(path).unwrap();
+    file.write_all(&contents).unwrap();
 }
 
 fn read(path: &str) -> Vec<u8> {
