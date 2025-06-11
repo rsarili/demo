@@ -6,7 +6,7 @@ CONTEXT=--context stage=${USER}
 
 .PHONY: deploy
 deploy: package-lambda
-	cd ${INFRA}; cdk deploy ${CONTEXT}
+	cd ${INFRA}; cdk deploy --require-approval never ${CONTEXT}
 
 .PHONY: destroy
 destroy:
