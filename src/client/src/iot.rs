@@ -1,5 +1,3 @@
-use reqwest::blocking::get;
-use reqwest::blocking::Response;
 use rumqttc::Packet;
 use rumqttc::Transport;
 use rumqttc::{MqttOptions, QoS, TlsConfiguration};

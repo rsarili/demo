@@ -1,14 +1,6 @@
 use reqwest::blocking::get;
 use reqwest::blocking::Response;
-use rumqttc::Packet;
-use rumqttc::Publish;
-use rumqttc::Transport;
-use rumqttc::{MqttOptions, QoS, TlsConfiguration};
 use std::collections::HashMap;
-use std::io::Read;
-use std::process::Command;
-use std::ptr::null;
-use std::time::Duration;
 use std::{io, io::Write};
 use sysinfo::System;
 mod iot;
