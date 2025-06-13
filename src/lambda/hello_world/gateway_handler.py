@@ -17,26 +17,13 @@ app = APIGatewayRestResolver()
 iot_client: IoTClient = boto3.client("iot")
 
 
-@app.post("/todos")
-def post_todos():
-    data: dict = app.current_event.json_body
-    logger.append_keys(user_id=data.get("userId"))
-    
-    if data.get("error") == 500:
-        raise Exception("unhandled error")
-    
-    todo: Response = requests.post("https://jsonplaceholder.typicode.com/todos", data=data)
-
-    logger.info("request succcesful")
-
-    return {"todos": todo.json()}, 201
-
 @app.post("/certificates")
-def post_todos():
+def create_certificate():
     keys_and_certificate: CreateKeysAndCertificateResponseTypeDef = iot_client.create_keys_and_certificate(setAsActive=True)
     iot_client.attach_policy(policyName=os.environ["POLICY_NAME"], target=keys_and_certificate["certificateArn"])
 
     return {"certificate":keys_and_certificate["certificatePem"], "public_key": keys_and_certificate["keyPair"]["PublicKey"], "private_key": keys_and_certificate["keyPair"]["PrivateKey"]}, 201
+
 
 @log_uncaught_exceptions(logger=logger)
 @logger.inject_lambda_context(log_event=True, clear_state=True, correlation_id_path=correlation_paths.API_GATEWAY_HTTP)
