@@ -1,4 +1,4 @@
-use aws_config::{sso, BehaviorVersion};
+use aws_config::BehaviorVersion;
 use aws_sdk_cloudformation::Client;
 use std;
 use tokio::runtime::Runtime;
