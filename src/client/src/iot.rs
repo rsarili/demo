@@ -1,7 +1,9 @@
+use rand::Rng;
 use rumqttc::Packet;
 use rumqttc::Transport;
 use rumqttc::{MqttOptions, QoS, TlsConfiguration};
 use std::collections::HashMap;
+use std::fmt::format;
 use std::time::Duration;
 use std::{io::Read, io::Write};
 
@@ -34,10 +36,14 @@ struct Certificate {
     certificate: String,
 }
 
-pub fn create_certificate(registration_endpoint: String) {
+fn create_certificate(registration_endpoint: String) {
     let mut body = HashMap::new();
+    let mut rng = rand::rng();
 
-    body.insert("device_id", "rust-device");
+    body.insert(
+        "deviceId",
+        format!("rust-device-{}", rng.random_range(0..1000)),
+    );
 
     let client = reqwest::blocking::Client::new();
     let response = client

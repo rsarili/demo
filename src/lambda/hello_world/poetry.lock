@@ -307,18 +307,19 @@ files = [
 
 [[package]]
 name = "types-boto3"
-version = "1.38.33"
-description = "Type annotations for boto3 1.38.33 generated with mypy-boto3-builder 8.11.0"
+version = "1.38.36"
+description = "Type annotations for boto3 1.38.36 generated with mypy-boto3-builder 8.11.0"
 optional = false
 python-versions = ">=3.8"
 groups = ["main"]
 files = [
-    {file = "types_boto3-1.38.33-py3-none-any.whl", hash = "sha256:5adfd34e4446f6da1e96ff9f4b5ee4450ada1e549020b0a4c3f9b920ef866c84"},
-    {file = "types_boto3-1.38.33.tar.gz", hash = "sha256:eecc5977da9a0b0dac0942d116c00ce69ffe8bfcfc63e29ef68158b6b0d7e9f5"},
+    {file = "types_boto3-1.38.36-py3-none-any.whl", hash = "sha256:9eae0662a0af3661539069f2e1b366e88f4d767bd181ba599c200bbe71805648"},
+    {file = "types_boto3-1.38.36.tar.gz", hash = "sha256:5a61ea02adc6c6ff66ebd2d05b8fc700c5df722845a98a837ebed4af851972e8"},
 ]
 
 [package.dependencies]
 botocore-stubs = "*"
+types-boto3-dynamodb = {version = ">=1.38.0,<1.39.0", optional = true, markers = "extra == \"dynamodb\""}
 types-boto3-iot = {version = ">=1.38.0,<1.39.0", optional = true, markers = "extra == \"iot\""}
 types-s3transfer = "*"
 
@@ -370,7 +371,7 @@ bedrock-data-automation-runtime = ["types-boto3-bedrock-data-automation-runtime 
 bedrock-runtime = ["types-boto3-bedrock-runtime (>=1.38.0,<1.39.0)"]
 billing = ["types-boto3-billing (>=1.38.0,<1.39.0)"]
 billingconductor = ["types-boto3-billingconductor (>=1.38.0,<1.39.0)"]
-boto3 = ["boto3 (==1.38.33)"]
+boto3 = ["boto3 (==1.38.36)"]
 braket = ["types-boto3-braket (>=1.38.0,<1.39.0)"]
 budgets = ["types-boto3-budgets (>=1.38.0,<1.39.0)"]
 ce = ["types-boto3-ce (>=1.38.0,<1.39.0)"]
@@ -733,6 +734,18 @@ workspaces-web = ["types-boto3-workspaces-web (>=1.38.0,<1.39.0)"]
 xray = ["types-boto3-xray (>=1.38.0,<1.39.0)"]
 
 [[package]]
+name = "types-boto3-dynamodb"
+version = "1.38.4"
+description = "Type annotations for boto3 DynamoDB 1.38.4 service generated with mypy-boto3-builder 8.10.1"
+optional = false
+python-versions = ">=3.8"
+groups = ["main"]
+files = [
+    {file = "types_boto3_dynamodb-1.38.4-py3-none-any.whl", hash = "sha256:7f3cde2850dc3af3776863a4655551fe10aeba5b778c0d3c1cbd57102caf419f"},
+    {file = "types_boto3_dynamodb-1.38.4.tar.gz", hash = "sha256:b863b1ecdcdda2cfe553049a5748d59ca64c06b64c19dfbc6b2588a28686fb33"},
+]
+
+[[package]]
 name = "types-boto3-iot"
 version = "1.38.0"
 description = "Type annotations for boto3 IoT 1.38.0 service generated with mypy-boto3-builder 8.10.1"
@@ -789,4 +802,4 @@ zstd = ["zstandard (>=0.18.0)"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.13,<4.0.0"
-content-hash = "5ba2a9d952be8e2d1247b80ab53d10a7f5f99d2fc6e7169ec21c9cfafdb19f2d"
+content-hash = "5ad700a44f9196f48311b63c4c74bf30f9c435abb1d72965f83256b6b9ebe88c"

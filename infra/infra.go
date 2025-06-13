@@ -5,6 +5,7 @@ import (
 	"github.com/aws/aws-cdk-go/awscdk/v2"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsapigateway"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awscloudwatch"
+	"github.com/aws/aws-cdk-go/awscdk/v2/awsdynamodb"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsiam"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsiot"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awslambda"
@@ -21,8 +22,8 @@ type InfraStackProps struct {
 }
 
 func NewInfraStack(scope constructs.Construct, props InfraStackProps) awscdk.Stack {
-	stack_name := "iot-demo-" + props.Stage
-	stack := awscdk.NewStack(scope, &stack_name, &props.StackProps)
+	stackName := "iot-demo-" + props.Stage
+	stack := awscdk.NewStack(scope, &stackName, &props.StackProps)
 
 	policyName := "IotDevicePolicy"
 	awsiot.NewCfnPolicy(stack, jsii.String("IotCorePolicy"), &awsiot.CfnPolicyProps{
@@ -39,15 +40,27 @@ func NewInfraStack(scope constructs.Construct, props InfraStackProps) awscdk.Sta
 		PolicyName: &policyName,
 	})
 
+	certificates_table := awsdynamodb.NewTableV2(stack, jsii.String("CertificatesTable"), &awsdynamodb.TablePropsV2{
+		PartitionKey: &awsdynamodb.Attribute{
+			Name: jsii.String("deviceId"),
+			Type: awsdynamodb.AttributeType_STRING,
+		},
+		TableName:     jsii.String(*getResourceName(stackName, "CertificatesTable")),
+		RemovalPolicy: awscdk.RemovalPolicy_DESTROY,
+	})
+
 	gateway_handler_function := awslambda.NewFunction(stack, jsii.String("GatewayFunction"), &awslambda.FunctionProps{
 		Runtime:      awslambda.Runtime_PYTHON_3_13(),
 		Handler:      jsii.String("gateway_handler.handler"),
-		FunctionName: getResourceName(stack_name, "gateway"),
+		FunctionName: getResourceName(stackName, "gateway"),
 		Code:         awslambda.Code_FromAsset(jsii.String("../src/lambda/hello_world/dist"), nil),
 		Environment: &map[string]*string{
 			"POLICY_NAME": &policyName,
+			"TABLE_NAME":  certificates_table.TableName(),
 		},
 	})
+
+	certificates_table.GrantFullAccess(gateway_handler_function)
 	gateway_handler_function.Role().AddToPrincipalPolicy(awsiam.NewPolicyStatement(
 		&awsiam.PolicyStatementProps{
 			Effect:    awsiam.Effect_ALLOW,
@@ -57,14 +70,18 @@ func NewInfraStack(scope constructs.Construct, props InfraStackProps) awscdk.Sta
 	))
 
 	rest_api := awsapigateway.NewRestApi(stack, jsii.String("RestApi"), &awsapigateway.RestApiProps{
-		RestApiName: getResourceName(stack_name, "api"),
+		RestApiName: getResourceName(stackName, "api"),
 		DeployOptions: &awsapigateway.StageOptions{
 			StageName: jsii.String("v1"),
 		},
 	})
 
-	rest_api.Root().AddResource(
-		jsii.String("certificates"), nil).AddMethod(jsii.String("POST"),
+	certificates_resource := rest_api.Root().AddResource(
+		jsii.String("certificates"), nil)
+	certificates_resource.AddMethod(jsii.String("POST"),
+		awsapigateway.NewLambdaIntegration(gateway_handler_function, nil),
+		nil)
+	certificates_resource.AddMethod(jsii.String("DELETE"),
 		awsapigateway.NewLambdaIntegration(gateway_handler_function, nil),
 		nil)
 
@@ -79,13 +96,13 @@ func NewInfraStack(scope constructs.Construct, props InfraStackProps) awscdk.Sta
 	})
 
 	awscloudwatch.NewDashboard(stack, jsii.String("Dashboard"), &awscloudwatch.DashboardProps{
-		DashboardName: getResourceName(stack_name, "dashboard"),
+		DashboardName: getResourceName(stackName, "dashboard"),
 		Widgets:       &[]*[]awscloudwatch.IWidget{{widget}},
 	})
 
 	awscdk.NewCfnOutput(stack, jsii.String("ApiEndpoint"), &awscdk.CfnOutputProps{
 		Value:      jsii.String(*rest_api.Url() + "/certificates"),
-		ExportName: getResourceName(stack_name, "device-registration-endpoint"),
+		ExportName: getResourceName(stackName, "device-registration-endpoint"),
 	})
 
 	cfg, err := config.LoadDefaultConfig(context.TODO())
@@ -102,7 +119,7 @@ func NewInfraStack(scope constructs.Construct, props InfraStackProps) awscdk.Sta
 
 	awscdk.NewCfnOutput(stack, jsii.String("IotEndpoint"), &awscdk.CfnOutputProps{
 		Value:      res.EndpointAddress,
-		ExportName: getResourceName(stack_name, "iot-core-endpoint"),
+		ExportName: getResourceName(stackName, "iot-core-endpoint"),
 	})
 
 	return stack

@@ -11,7 +11,7 @@ dependencies = [
     "aws-lambda-powertools (>=3.13.0,<4.0.0)",
     "requests (>=2.32.3,<3.0.0)",
     "boto3 (>=1.38.33,<2.0.0)",
-    "types-boto3[iot] (>=1.38.33,<2.0.0)"
+    "types-boto3[dynamodb,iot] (>=1.38.36,<2.0.0)"
 ]
 
 
