@@ -10,13 +10,14 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn new() -> Client {
-        return Client { client: connect() };
+    pub fn connect(mqtt_endpoint: String) -> Client {
+        return Client {
+            client: connect(mqtt_endpoint),
+        };
     }
 
-    pub fn new_without_cert() -> Client {
-        create_certificate();
-        return Client { client: connect() };
+    pub fn register(registration_endpoint: String) {
+        create_certificate(registration_endpoint);
     }
 
     pub fn publish(&self, topic: &str, payload: &str) {
@@ -33,15 +34,17 @@ struct Certificate {
     certificate: String,
 }
 
-pub fn create_certificate() {
+pub fn create_certificate(registration_endpoint: String) {
     let mut body = HashMap::new();
 
     body.insert("device_id", "rust-device");
 
-    let url: &str = "https://<iot>.execute-api.eu-central-1.amazonaws.com/v1/certificates";
-
     let client = reqwest::blocking::Client::new();
-    let response = client.post(url).json(&body).send().unwrap();
+    let response = client
+        .post(registration_endpoint)
+        .json(&body)
+        .send()
+        .unwrap();
 
     let cert = response.json::<Certificate>().unwrap();
     println!("Certificate: {cert:?}");
@@ -51,7 +54,7 @@ pub fn create_certificate() {
     write("device-public.pem.key", cert.public_key.into_bytes());
 }
 
-fn connect() -> rumqttc::Client {
+fn connect(mqtt_endpoint: String) -> rumqttc::Client {
     let ca = read("./AmazonRootCA1.pem");
     let client_cert = read("./device-certificate.pem.crt");
     let client_key = read("./device-private.pem.key");
@@ -62,11 +65,7 @@ fn connect() -> rumqttc::Client {
         client_auth: Some((client_cert, client_key)),
     });
 
-    let mut mqttoptions = MqttOptions::new(
-        "rust-client",
-        "<api>-ats.iot.eu-central-1.amazonaws.com",
-        8883,
-    );
+    let mut mqttoptions = MqttOptions::new("rust-client", mqtt_endpoint, 8883);
     mqttoptions.set_transport(transport);
     mqttoptions.set_keep_alive(Duration::from_secs(60));
 

@@ -1,15 +1,18 @@
 package main
 
 import (
+	"context"
 	"github.com/aws/aws-cdk-go/awscdk/v2"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsapigateway"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awscloudwatch"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsiam"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsiot"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awslambda"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/iot"
 	"github.com/aws/constructs-go/constructs/v10"
-
 	"github.com/aws/jsii-runtime-go"
+	"log"
 )
 
 type InfraStackProps struct {
@@ -47,8 +50,8 @@ func NewInfraStack(scope constructs.Construct, props InfraStackProps) awscdk.Sta
 	})
 	gateway_handler_function.Role().AddToPrincipalPolicy(awsiam.NewPolicyStatement(
 		&awsiam.PolicyStatementProps{
-			Effect:  awsiam.Effect_ALLOW,
-			Actions: &[]*string{jsii.String("iot:CreateKeysAndCertificate"), jsii.String("iot:AttachPolicy")},
+			Effect:    awsiam.Effect_ALLOW,
+			Actions:   &[]*string{jsii.String("iot:CreateKeysAndCertificate"), jsii.String("iot:AttachPolicy")},
 			Resources: &[]*string{jsii.String("*")},
 		},
 	))
@@ -60,10 +63,6 @@ func NewInfraStack(scope constructs.Construct, props InfraStackProps) awscdk.Sta
 		},
 	})
 
-	rest_api.Root().AddResource(
-		jsii.String("todos"), nil).AddMethod(jsii.String("POST"),
-		awsapigateway.NewLambdaIntegration(gateway_handler_function, nil),
-		nil)
 	rest_api.Root().AddResource(
 		jsii.String("certificates"), nil).AddMethod(jsii.String("POST"),
 		awsapigateway.NewLambdaIntegration(gateway_handler_function, nil),
@@ -85,8 +84,25 @@ func NewInfraStack(scope constructs.Construct, props InfraStackProps) awscdk.Sta
 	})
 
 	awscdk.NewCfnOutput(stack, jsii.String("ApiEndpoint"), &awscdk.CfnOutputProps{
-		Value:      rest_api.Url(),
-		ExportName: getResourceName(stack_name, "api-endpoint"),
+		Value:      jsii.String(*rest_api.Url() + "/certificates"),
+		ExportName: getResourceName(stack_name, "device-registration-endpoint"),
+	})
+
+	cfg, err := config.LoadDefaultConfig(context.TODO())
+	if err != nil {
+		log.Fatalf("unable to load SDK config, %v", err)
+	}
+	iot_client := iot.NewFromConfig(cfg)
+	res, err := iot_client.DescribeEndpoint(context.TODO(), &iot.DescribeEndpointInput{
+		EndpointType: jsii.String("iot:Data-ATS"),
+	})
+	if err != nil {
+		log.Fatalf("unable to get IoT endpoint, %v", err)
+	}
+
+	awscdk.NewCfnOutput(stack, jsii.String("IotEndpoint"), &awscdk.CfnOutputProps{
+		Value:      res.EndpointAddress,
+		ExportName: getResourceName(stack_name, "iot-core-endpoint"),
 	})
 
 	return stack

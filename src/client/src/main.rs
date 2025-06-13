@@ -4,9 +4,11 @@ use std::collections::HashMap;
 use std::{io, io::Write};
 use sysinfo::System;
 mod iot;
+mod stack;
 
 fn main() -> () {
     let mut client_option: Option<iot::Client> = None;
+    let stack = stack::Stack::new();
 
     loop {
         print!("Enter command: ");
@@ -22,9 +24,13 @@ fn main() -> () {
                 let response = ping_server();
                 println!("Response: {}", response);
             }
+            "register" => {
+                println!("Registering to server...");
+                iot::Client::register(stack.device_registration_endpoint.clone());
+            }
             "connect" => {
                 println!("Connecting to server...");
-                client_option = Some(iot::Client::new());
+                client_option = Some(iot::Client::connect(stack.iot_core_endpoint.clone()));
             }
             "post" => {
                 println!("Sending post request to server...");
