@@ -18,7 +18,7 @@ package-lambda:
 	poetry export --format=requirements.txt > requirements.lambda.txt; \
 	rm -rf dist; \
 	poetry run pip install --target dist -r requirements.lambda.txt; \
-	rsync -av --exclude='dist' --exclude='.venv' . dist/
+	rsync -av --exclude='dist' --exclude='.venv' --exclude='.ruff_cache' . dist/
 
 .PHONY: run-lambda
 run-lambda:
@@ -38,4 +38,5 @@ test:
 format:
 	cd infra; go fmt
 	cd test/networked; go fmt
+	cd src/client; cargo fmt
 	cd src/lambda/hello_world; ruff check --fix; ruff format

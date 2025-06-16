@@ -38,12 +38,8 @@ struct Certificate {
 
 fn create_certificate(registration_endpoint: String) {
     let mut body = HashMap::new();
-    let mut rng = rand::rng();
 
-    body.insert(
-        "deviceId",
-        format!("rust-device-{}", rng.random_range(0..1000)),
-    );
+    body.insert("deviceId", "rust-device");
 
     let client = reqwest::blocking::Client::new();
     let response = client

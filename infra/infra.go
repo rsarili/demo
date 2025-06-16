@@ -48,6 +48,15 @@ func NewInfraStack(scope constructs.Construct, props InfraStackProps) awscdk.Sta
 		TableName:     jsii.String(*getResourceName(stackName, "CertificatesTable")),
 		RemovalPolicy: awscdk.RemovalPolicy_DESTROY,
 	})
+	idempotency_table := awsdynamodb.NewTableV2(stack, jsii.String("IdempotencyTable"), &awsdynamodb.TablePropsV2{
+		PartitionKey: &awsdynamodb.Attribute{
+			Name: jsii.String("id"),
+			Type: awsdynamodb.AttributeType_STRING,
+		},
+		TableName:           jsii.String(*getResourceName(stackName, "IdempotencyTable")),
+		RemovalPolicy:       awscdk.RemovalPolicy_DESTROY,
+		TimeToLiveAttribute: jsii.String("expiration"),
+	})
 
 	gateway_handler_function := awslambda.NewFunction(stack, jsii.String("GatewayFunction"), &awslambda.FunctionProps{
 		Runtime:      awslambda.Runtime_PYTHON_3_13(),
@@ -55,12 +64,14 @@ func NewInfraStack(scope constructs.Construct, props InfraStackProps) awscdk.Sta
 		FunctionName: getResourceName(stackName, "gateway"),
 		Code:         awslambda.Code_FromAsset(jsii.String("../src/lambda/hello_world/dist"), nil),
 		Environment: &map[string]*string{
-			"POLICY_NAME": &policyName,
-			"TABLE_NAME":  certificates_table.TableName(),
+			"IOT_DEVICE_POLICY":  &policyName,
+			"CERTIFICATES_TABLE": certificates_table.TableName(),
+			"IDEMPOTENCY_TABLE":  idempotency_table.TableName(),
 		},
 	})
 
 	certificates_table.GrantFullAccess(gateway_handler_function)
+	idempotency_table.GrantFullAccess(gateway_handler_function)
 	gateway_handler_function.Role().AddToPrincipalPolicy(awsiam.NewPolicyStatement(
 		&awsiam.PolicyStatementProps{
 			Effect:    awsiam.Effect_ALLOW,
