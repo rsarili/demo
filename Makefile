@@ -32,3 +32,10 @@ tail-lambda:
 .PHONY: test
 test:
 	cd test/networked; go test
+
+
+.PHONY: format
+format:
+	cd infra; go fmt
+	cd test/networked; go fmt
+	cd src/lambda/hello_world; ruff check --fix; ruff format
