@@ -10,6 +10,7 @@ deploy: package-lambda
 
 .PHONY: destroy
 destroy:
+	./delete_certificates.sh
 	cd ${INFRA}; cdk destroy --force ${CONTEXT} 
 
 .PHONY: package-lambda
