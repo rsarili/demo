@@ -41,6 +41,7 @@ idempotency_persistence_layer: DynamoDBPersistenceLayer = (
 @app.post("/certificates")
 def create_certificate():
     body: dict = app.current_event.json_body
+    logger.append_keys(device_id=body["deviceId"])
 
     keys_and_certificate: CreateKeysAndCertificateResponseTypeDef = (
         iot_client.create_keys_and_certificate(setAsActive=True)

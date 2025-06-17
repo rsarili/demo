@@ -102,7 +102,7 @@ func NewInfraStack(scope constructs.Construct, props InfraStackProps) awscdk.Sta
 		LogGroupNames: &[]*string{gateway_handler_function.LogGroup().LogGroupName()},
 		QueryLines: &[]*string{
 			jsii.String("filter level=\"ERROR\""),
-			jsii.String("fields user_id, @timestamp, @message, @logStream, @log"),
+			jsii.String("fields device_id, @timestamp, @message, @logStream, @log"),
 			jsii.String("sort @timestamp desc"),
 			jsii.String("limit 10000")},
 		Width: jsii.Number(24),
