@@ -1,0 +1,7 @@
+from enum import StrEnum
+
+
+class EnvironmentVariables(StrEnum):
+    CERTIFICATES_TABLE = "CERTIFICATES_TABLE"
+    IDEMPOTENCY_TABLE = "IDEMPOTENCY_TABLE"
+    IOT_DEVICE_POLICY = "IOT_DEVICE_POLICY"

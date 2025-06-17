@@ -18,8 +18,8 @@ impl Client {
         };
     }
 
-    pub fn register(registration_endpoint: String) {
-        create_certificate(registration_endpoint);
+    pub fn register(device_id: String, registration_endpoint: String) {
+        create_certificate(device_id, registration_endpoint);
     }
 
     pub fn publish(&self, topic: &str, payload: &str) {
@@ -36,10 +36,10 @@ struct Certificate {
     certificate: String,
 }
 
-fn create_certificate(registration_endpoint: String) {
+fn create_certificate(device_id: String, registration_endpoint: String) {
     let mut body = HashMap::new();
 
-    body.insert("deviceId", "rust-device");
+    body.insert("deviceId", device_id);
 
     let client = reqwest::blocking::Client::new();
     let response = client

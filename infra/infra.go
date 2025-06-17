@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"log"
+
 	"github.com/aws/aws-cdk-go/awscdk/v2"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsapigateway"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awscloudwatch"
@@ -13,7 +15,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/iot"
 	"github.com/aws/constructs-go/constructs/v10"
 	"github.com/aws/jsii-runtime-go"
-	"log"
 )
 
 type InfraStackProps struct {
@@ -64,9 +65,10 @@ func NewInfraStack(scope constructs.Construct, props InfraStackProps) awscdk.Sta
 		FunctionName: getResourceName(stackName, "gateway"),
 		Code:         awslambda.Code_FromAsset(jsii.String("../src/lambda/hello_world/dist"), nil),
 		Environment: &map[string]*string{
-			"IOT_DEVICE_POLICY":  &policyName,
-			"CERTIFICATES_TABLE": certificates_table.TableName(),
-			"IDEMPOTENCY_TABLE":  idempotency_table.TableName(),
+			"IOT_DEVICE_POLICY":            &policyName,
+			"CERTIFICATES_TABLE":           certificates_table.TableName(),
+			"IDEMPOTENCY_TABLE":            idempotency_table.TableName(),
+			"POWERTOOLS_METRICS_NAMESPACE": &stackName,
 		},
 	})
 
@@ -96,7 +98,7 @@ func NewInfraStack(scope constructs.Construct, props InfraStackProps) awscdk.Sta
 		awsapigateway.NewLambdaIntegration(gateway_handler_function, nil),
 		nil)
 
-	widget := awscloudwatch.NewLogQueryWidget(&awscloudwatch.LogQueryWidgetProps{
+	error_log_widget := awscloudwatch.NewLogQueryWidget(&awscloudwatch.LogQueryWidgetProps{
 		LogGroupNames: &[]*string{gateway_handler_function.LogGroup().LogGroupName()},
 		QueryLines: &[]*string{
 			jsii.String("filter level=\"ERROR\""),
@@ -106,9 +108,20 @@ func NewInfraStack(scope constructs.Construct, props InfraStackProps) awscdk.Sta
 		Width: jsii.Number(24),
 	})
 
+	certificates_created_widget := awscloudwatch.NewSingleValueWidget(&awscloudwatch.SingleValueWidgetProps{
+		Title: jsii.String("Certificates Created in last day"),
+		Metrics: &[]awscloudwatch.IMetric{awscloudwatch.NewMetric(&awscloudwatch.MetricProps{
+			Namespace:     &stackName,
+			MetricName:    jsii.String("Success"),
+			DimensionsMap: &map[string]*string{"OperationName": jsii.String("CertificatesCreated")},
+			Statistic:     jsii.String("Sum"),
+			Period:        awscdk.Duration_Days(jsii.Number(1)),
+		})},
+	})
+
 	awscloudwatch.NewDashboard(stack, jsii.String("Dashboard"), &awscloudwatch.DashboardProps{
 		DashboardName: getResourceName(stackName, "dashboard"),
-		Widgets:       &[]*[]awscloudwatch.IWidget{{widget}},
+		Widgets:       &[]*[]awscloudwatch.IWidget{{certificates_created_widget}, {error_log_widget}},
 	})
 
 	awscdk.NewCfnOutput(stack, jsii.String("ApiEndpoint"), &awscdk.CfnOutputProps{

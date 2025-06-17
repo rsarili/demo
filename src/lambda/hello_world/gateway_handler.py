@@ -1,9 +1,10 @@
 import os
 
 import boto3
-from aws_lambda_powertools import Logger
+from aws_lambda_powertools import Logger, Metrics
 from aws_lambda_powertools.event_handler import APIGatewayRestResolver
 from aws_lambda_powertools.logging import correlation_paths
+from aws_lambda_powertools.metrics.base import MetricUnit
 from aws_lambda_powertools.utilities.idempotency import (
     DynamoDBPersistenceLayer,
     IdempotencyConfig,
@@ -15,19 +16,25 @@ from types_boto3_iot import IoTClient
 from types_boto3_iot.type_defs import CreateKeysAndCertificateResponseTypeDef
 
 from certificate_storage import CertificateStorage
+from env_variables import EnvironmentVariables
 from utils import log_uncaught_exceptions
 
 logger = Logger()
 app = APIGatewayRestResolver()
 iot_client: IoTClient = boto3.client("iot")
 dynamodb_service: DynamoDBServiceResource = boto3.resource("dynamodb")
+metrics: Metrics = Metrics()
 
 certificate_storage: CertificateStorage = CertificateStorage(
     logger=logger,
-    table=dynamodb_service.Table(os.environ["CERTIFICATES_TABLE"]),
+    table=dynamodb_service.Table(
+        os.environ[EnvironmentVariables.CERTIFICATES_TABLE]
+    ),
 )
 idempotency_persistence_layer: DynamoDBPersistenceLayer = (
-    DynamoDBPersistenceLayer(table_name=os.environ["IDEMPOTENCY_TABLE"])
+    DynamoDBPersistenceLayer(
+        table_name=os.environ[EnvironmentVariables.IDEMPOTENCY_TABLE]
+    )
 )
 
 
@@ -39,7 +46,7 @@ def create_certificate():
         iot_client.create_keys_and_certificate(setAsActive=True)
     )
     iot_client.attach_policy(
-        policyName=os.environ["IOT_DEVICE_POLICY"],
+        policyName=os.environ[EnvironmentVariables.IOT_DEVICE_POLICY],
         target=keys_and_certificate["certificateArn"],
     )
 
@@ -47,6 +54,9 @@ def create_certificate():
         device_id=body["deviceId"],
         certificate_arn=keys_and_certificate["certificateArn"],
     )
+
+    metrics.add_dimension(name="OperationName", value="CertificatesCreated")
+    metrics.add_metric(name="Success", unit=MetricUnit.Count, value=1)
 
     return {
         "certificate": keys_and_certificate["certificatePem"],
@@ -68,5 +78,6 @@ def create_certificate():
         event_key_jmespath="body",
     ),
 )
+@metrics.log_metrics
 def handler(event: dict, context: LambdaContext) -> dict:
     return app.resolve(event, context)

@@ -26,7 +26,10 @@ fn main() -> () {
             }
             "register" => {
                 println!("Registering to server...");
-                iot::Client::register(stack.device_registration_endpoint.clone());
+                iot::Client::register(
+                    "rust-device".to_string(),
+                    stack.device_registration_endpoint.clone(),
+                );
             }
             "connect" => {
                 println!("Connecting to server...");
