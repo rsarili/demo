@@ -40,6 +40,7 @@ fn create_certificate(device_id: String, registration_endpoint: String) {
     let mut body = HashMap::new();
 
     body.insert("deviceId", device_id);
+    body.insert("deviceType", "sensor".to_string());
 
     let client = reqwest::blocking::Client::new();
     let response = client
@@ -47,6 +48,15 @@ fn create_certificate(device_id: String, registration_endpoint: String) {
         .json(&body)
         .send()
         .unwrap();
+
+    if response.status() != 201 {
+        println!(
+            "Error, status: {}, body: {}",
+            response.status(),
+            response.text().unwrap()
+        );
+        return;
+    }
 
     let cert = response.json::<Certificate>().unwrap();
     println!("Certificate: {cert:?}");

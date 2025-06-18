@@ -18,7 +18,7 @@ package-lambda:
 	cd ${LAMBDA}; \
 	poetry export --format=requirements.txt > requirements.lambda.txt; \
 	rm -rf dist; \
-	poetry run pip install --target dist -r requirements.lambda.txt; \
+	poetry run pip install --platform manylinux2014_x86_64 --only-binary=:all: --target dist -r requirements.lambda.txt; \
 	rsync -av --exclude='dist' --exclude='.venv' --exclude='.ruff_cache' . dist/
 
 .PHONY: run-lambda

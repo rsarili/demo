@@ -41,12 +41,12 @@ func NewInfraStack(scope constructs.Construct, props InfraStackProps) awscdk.Sta
 		PolicyName: &policyName,
 	})
 
-	certificates_table := awsdynamodb.NewTableV2(stack, jsii.String("CertificatesTable"), &awsdynamodb.TablePropsV2{
+	devices_table := awsdynamodb.NewTableV2(stack, jsii.String("DevicesTable"), &awsdynamodb.TablePropsV2{
 		PartitionKey: &awsdynamodb.Attribute{
 			Name: jsii.String("deviceId"),
 			Type: awsdynamodb.AttributeType_STRING,
 		},
-		TableName:     jsii.String(*getResourceName(stackName, "CertificatesTable")),
+		TableName:     jsii.String(*getResourceName(stackName, "DevicesTable")),
 		RemovalPolicy: awscdk.RemovalPolicy_DESTROY,
 	})
 	idempotency_table := awsdynamodb.NewTableV2(stack, jsii.String("IdempotencyTable"), &awsdynamodb.TablePropsV2{
@@ -66,13 +66,13 @@ func NewInfraStack(scope constructs.Construct, props InfraStackProps) awscdk.Sta
 		Code:         awslambda.Code_FromAsset(jsii.String("../src/lambda/hello_world/dist"), nil),
 		Environment: &map[string]*string{
 			"IOT_DEVICE_POLICY":            &policyName,
-			"CERTIFICATES_TABLE":           certificates_table.TableName(),
+			"DEVICES_TABLE":                devices_table.TableName(),
 			"IDEMPOTENCY_TABLE":            idempotency_table.TableName(),
 			"POWERTOOLS_METRICS_NAMESPACE": &stackName,
 		},
 	})
 
-	certificates_table.GrantFullAccess(gateway_handler_function)
+	devices_table.GrantFullAccess(gateway_handler_function)
 	idempotency_table.GrantFullAccess(gateway_handler_function)
 	gateway_handler_function.Role().AddToPrincipalPolicy(awsiam.NewPolicyStatement(
 		&awsiam.PolicyStatementProps{
@@ -89,12 +89,20 @@ func NewInfraStack(scope constructs.Construct, props InfraStackProps) awscdk.Sta
 		},
 	})
 
-	certificates_resource := rest_api.Root().AddResource(
-		jsii.String("certificates"), nil)
-	certificates_resource.AddMethod(jsii.String("POST"),
+	devices_resource := rest_api.Root().AddResource(
+		jsii.String("devices"), nil)
+	devices_resource.AddMethod(jsii.String("POST"),
 		awsapigateway.NewLambdaIntegration(gateway_handler_function, nil),
 		nil)
-	certificates_resource.AddMethod(jsii.String("DELETE"),
+	devices_resource.AddResource(jsii.String("{device_id}"), nil).AddMethod(jsii.String("GET"),
+		awsapigateway.NewLambdaIntegration(gateway_handler_function, nil),
+		&awsapigateway.MethodOptions{})
+	devices_resource.AddMethod(jsii.String("DELETE"),
+		awsapigateway.NewLambdaIntegration(gateway_handler_function, nil),
+		nil)
+
+	rest_api.Root().AddResource(
+		jsii.String("swagger"), nil).AddMethod(jsii.String("GET"),
 		awsapigateway.NewLambdaIntegration(gateway_handler_function, nil),
 		nil)
 
@@ -113,7 +121,7 @@ func NewInfraStack(scope constructs.Construct, props InfraStackProps) awscdk.Sta
 		Metrics: &[]awscloudwatch.IMetric{awscloudwatch.NewMetric(&awscloudwatch.MetricProps{
 			Namespace:     &stackName,
 			MetricName:    jsii.String("Success"),
-			DimensionsMap: &map[string]*string{"OperationName": jsii.String("CertificatesCreated")},
+			DimensionsMap: &map[string]*string{"OperationName": jsii.String("DevicesCreated")},
 			Statistic:     jsii.String("Sum"),
 			Period:        awscdk.Duration_Days(jsii.Number(1)),
 		})},
@@ -125,7 +133,7 @@ func NewInfraStack(scope constructs.Construct, props InfraStackProps) awscdk.Sta
 	})
 
 	awscdk.NewCfnOutput(stack, jsii.String("ApiEndpoint"), &awscdk.CfnOutputProps{
-		Value:      jsii.String(*rest_api.Url() + "/certificates"),
+		Value:      jsii.String(*rest_api.Url() + "/devices"),
 		ExportName: getResourceName(stackName, "device-registration-endpoint"),
 	})
 
