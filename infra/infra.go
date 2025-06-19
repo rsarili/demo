@@ -97,9 +97,6 @@ func NewInfraStack(scope constructs.Construct, props InfraStackProps) awscdk.Sta
 	devices_resource.AddResource(jsii.String("{device_id}"), nil).AddMethod(jsii.String("GET"),
 		awsapigateway.NewLambdaIntegration(gateway_handler_function, nil),
 		&awsapigateway.MethodOptions{})
-	devices_resource.AddMethod(jsii.String("DELETE"),
-		awsapigateway.NewLambdaIntegration(gateway_handler_function, nil),
-		nil)
 
 	rest_api.Root().AddResource(
 		jsii.String("swagger"), nil).AddMethod(jsii.String("GET"),
