@@ -1,9 +1,7 @@
-use rand::Rng;
 use rumqttc::Packet;
 use rumqttc::Transport;
 use rumqttc::{MqttOptions, QoS, TlsConfiguration};
 use std::collections::HashMap;
-use std::fmt::format;
 use std::time::Duration;
 use std::{io::Read, io::Write};
 
@@ -77,10 +75,16 @@ fn connect(mqtt_endpoint: String) -> rumqttc::Client {
         client_auth: Some((client_cert, client_key)),
     });
 
-    let mut mqttoptions = MqttOptions::new("rust-client", mqtt_endpoint, 8883);
+    let port = 8883;
+
+    let mut mqttoptions = MqttOptions::new("rust-client", &mqtt_endpoint, port);
     mqttoptions.set_transport(transport);
     mqttoptions.set_keep_alive(Duration::from_secs(60));
 
+    println!(
+        "connection to AWS Iot Core endpoint: {}, port: {}",
+        mqtt_endpoint, port
+    );
     //https://github.com/bytebeamio/rumqtt/blob/main/rumqttc/examples/syncpubsub.rs
     let (client, mut connection) = rumqttc::Client::new(mqttoptions, 10);
     client.subscribe("hello/+/world", QoS::AtLeastOnce).unwrap();
