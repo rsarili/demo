@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsiam"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsiot"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awslambda"
+	"github.com/aws/aws-cdk-go/awscdk/v2/awslogs"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/iot"
 	"github.com/aws/constructs-go/constructs/v10"
@@ -41,7 +42,7 @@ func NewInfraStack(scope constructs.Construct, props InfraStackProps) awscdk.Sta
 		PolicyName: &policyName,
 	})
 
-	devices_table := awsdynamodb.NewTableV2(stack, jsii.String("DevicesTable"), &awsdynamodb.TablePropsV2{
+	devicesTable := awsdynamodb.NewTableV2(stack, jsii.String("DevicesTable"), &awsdynamodb.TablePropsV2{
 		PartitionKey: &awsdynamodb.Attribute{
 			Name: jsii.String("deviceId"),
 			Type: awsdynamodb.AttributeType_STRING,
@@ -49,7 +50,7 @@ func NewInfraStack(scope constructs.Construct, props InfraStackProps) awscdk.Sta
 		TableName:     jsii.String(*getResourceName(stackName, "DevicesTable")),
 		RemovalPolicy: awscdk.RemovalPolicy_DESTROY,
 	})
-	idempotency_table := awsdynamodb.NewTableV2(stack, jsii.String("IdempotencyTable"), &awsdynamodb.TablePropsV2{
+	idempotencyTable := awsdynamodb.NewTableV2(stack, jsii.String("IdempotencyTable"), &awsdynamodb.TablePropsV2{
 		PartitionKey: &awsdynamodb.Attribute{
 			Name: jsii.String("id"),
 			Type: awsdynamodb.AttributeType_STRING,
@@ -59,22 +60,28 @@ func NewInfraStack(scope constructs.Construct, props InfraStackProps) awscdk.Sta
 		TimeToLiveAttribute: jsii.String("expiration"),
 	})
 
-	gateway_handler_function := awslambda.NewFunction(stack, jsii.String("GatewayFunction"), &awslambda.FunctionProps{
+	gatewayHandlerFunction := awslambda.NewFunction(stack, jsii.String("GatewayFunction"), &awslambda.FunctionProps{
 		Runtime:      awslambda.Runtime_PYTHON_3_13(),
 		Handler:      jsii.String("gateway_handler.handler"),
 		FunctionName: getResourceName(stackName, "gateway"),
 		Code:         awslambda.Code_FromAsset(jsii.String("../src/lambda/hello_world/dist"), nil),
 		Environment: &map[string]*string{
 			"IOT_DEVICE_POLICY":            &policyName,
-			"DEVICES_TABLE":                devices_table.TableName(),
-			"IDEMPOTENCY_TABLE":            idempotency_table.TableName(),
+			"DEVICES_TABLE":                devicesTable.TableName(),
+			"IDEMPOTENCY_TABLE":            idempotencyTable.TableName(),
 			"POWERTOOLS_METRICS_NAMESPACE": &stackName,
 		},
+		LogGroup: awslogs.NewLogGroup(
+			stack, jsii.String("GatewayFunctionLogGroup"), &awslogs.LogGroupProps{
+				RemovalPolicy: awscdk.RemovalPolicy_DESTROY,
+				Retention:     awslogs.RetentionDays_THREE_MONTHS,
+			},
+		),
 	})
 
-	devices_table.GrantFullAccess(gateway_handler_function)
-	idempotency_table.GrantFullAccess(gateway_handler_function)
-	gateway_handler_function.Role().AddToPrincipalPolicy(awsiam.NewPolicyStatement(
+	devicesTable.GrantFullAccess(gatewayHandlerFunction)
+	idempotencyTable.GrantFullAccess(gatewayHandlerFunction)
+	gatewayHandlerFunction.Role().AddToPrincipalPolicy(awsiam.NewPolicyStatement(
 		&awsiam.PolicyStatementProps{
 			Effect:    awsiam.Effect_ALLOW,
 			Actions:   &[]*string{jsii.String("iot:CreateKeysAndCertificate"), jsii.String("iot:AttachPolicy")},
@@ -92,19 +99,19 @@ func NewInfraStack(scope constructs.Construct, props InfraStackProps) awscdk.Sta
 	devices_resource := rest_api.Root().AddResource(
 		jsii.String("devices"), nil)
 	devices_resource.AddMethod(jsii.String("POST"),
-		awsapigateway.NewLambdaIntegration(gateway_handler_function, nil),
+		awsapigateway.NewLambdaIntegration(gatewayHandlerFunction, nil),
 		nil)
 	devices_resource.AddResource(jsii.String("{device_id}"), nil).AddMethod(jsii.String("GET"),
-		awsapigateway.NewLambdaIntegration(gateway_handler_function, nil),
+		awsapigateway.NewLambdaIntegration(gatewayHandlerFunction, nil),
 		&awsapigateway.MethodOptions{})
 
 	rest_api.Root().AddResource(
 		jsii.String("swagger"), nil).AddMethod(jsii.String("GET"),
-		awsapigateway.NewLambdaIntegration(gateway_handler_function, nil),
+		awsapigateway.NewLambdaIntegration(gatewayHandlerFunction, nil),
 		nil)
 
 	error_log_widget := awscloudwatch.NewLogQueryWidget(&awscloudwatch.LogQueryWidgetProps{
-		LogGroupNames: &[]*string{gateway_handler_function.LogGroup().LogGroupName()},
+		LogGroupNames: &[]*string{gatewayHandlerFunction.LogGroup().LogGroupName()},
 		QueryLines: &[]*string{
 			jsii.String("filter level=\"ERROR\""),
 			jsii.String("fields device_id, @timestamp, @message, @logStream, @log"),

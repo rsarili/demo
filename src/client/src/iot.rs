@@ -28,6 +28,7 @@ impl Client {
 }
 
 #[derive(Debug, serde::Deserialize)] // Add this attribute macro
+#[serde(rename_all = "camelCase")]
 struct Certificate {
     public_key: String,
     private_key: String,
