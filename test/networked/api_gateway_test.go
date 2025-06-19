@@ -19,62 +19,15 @@ import (
 
 const stackName = "iot-demo"
 
-func TestSuccess(t *testing.T) {
-	var ApiGatewayUrl string = GetApiEndpoint()
-
-	requestBody := []byte(`{
-		"title": "Post title",
-		"body": "Post description",
-		"userId": 1
-		}`)
-	log.Printf("POST %s", ApiGatewayUrl)
-	resp, err := http.Post(ApiGatewayUrl+"/todos", "application/json", bytes.NewBuffer(requestBody))
-	if err != nil {
-		log.Fatalf("failure")
-	}
-	assert.Equal(t, resp.StatusCode, http.StatusCreated)
-
-	defer resp.Body.Close()
-	responseBody, _ := io.ReadAll(resp.Body)
-
-	log.Println(resp.StatusCode)
-	log.Println(string(responseBody))
+type StackOutputs struct {
+	IotCoreEndpoint string
+	DeviceEndpoint  string
 }
 
-func TestServerError(t *testing.T) {
-	var ApiGatewayUrl string = GetApiEndpoint()
-	userId := rand.IntN(10000)
-	requestBody := []byte(fmt.Sprintf(`{
-		"title": "Post title",
-		"body": "Post description",
-		"userId": %d,
-		"error": 500
-		}`, userId))
-
-	log.Printf("POST %s", ApiGatewayUrl)
-	log.Printf("userId %d", userId)
-	resp, err := http.Post(ApiGatewayUrl+"/todos", "application/json", bytes.NewBuffer(requestBody))
-	if err != nil {
-		log.Fatalf("failure")
-	}
-	assert.Equal(t, resp.StatusCode, http.StatusBadGateway)
-
-	defer resp.Body.Close()
-	responseBody, _ := io.ReadAll(resp.Body)
-
-	log.Println(resp.StatusCode)
-	log.Println(string(responseBody))
-}
-
-func GetApiEndpoint() string {
+func NewStackOutputs() StackOutputs {
+	client := newCloudformationClient()
 	fullStackName := getFullStackName()
-	apiUrlExportName := fullStackName + "-api-endpoint"
-
-	cfg, err := config.LoadDefaultConfig(context.TODO())
-	if err != nil {
-		log.Fatalf("unable to load SDK config, %v", err)
-	}
-	client := cloudformation.NewFromConfig(cfg)
+	deviceEndpointUrlExportName := fullStackName + "-device-registration-endpoint"
 
 	stackOutput, err := client.DescribeStacks(context.TODO(), &cloudformation.DescribeStacksInput{
 		StackName: &fullStackName,
@@ -83,17 +36,72 @@ func GetApiEndpoint() string {
 	if err != nil {
 		log.Fatalf("unable get stack output")
 	}
+	log.Println(deviceEndpointUrlExportName)
 
 	var ApiGatewayUrl *string
 	for _, export := range stackOutput.Stacks[0].Outputs {
-		if export.ExportName != nil && *export.ExportName == apiUrlExportName {
+		if export.ExportName != nil && *export.ExportName == deviceEndpointUrlExportName {
 			ApiGatewayUrl = export.OutputValue
 		}
 	}
 	if ApiGatewayUrl == nil {
 		log.Fatalf("can not found api gateway url")
 	}
-	return *ApiGatewayUrl
+	return StackOutputs{
+		IotCoreEndpoint: "",
+		DeviceEndpoint:  *ApiGatewayUrl,
+	}
+}
+
+func TestServerError(t *testing.T) {
+	stackOutput := NewStackOutputs()
+	deviceId := rand.IntN(1000)
+	requestBody := []byte(fmt.Sprintf(`{
+		"deviceId": %d
+		}`, deviceId))
+
+	log.Printf("POST %s", stackOutput.DeviceEndpoint)
+	log.Printf("deviceId: %d", deviceId)
+	resp, err := http.Post(stackOutput.DeviceEndpoint, "application/json", bytes.NewBuffer(requestBody))
+	if err != nil {
+		log.Fatalf("failure")
+	}
+	assert.Equal(t, resp.StatusCode, http.StatusUnprocessableEntity)
+
+	defer resp.Body.Close()
+	responseBody, _ := io.ReadAll(resp.Body)
+
+	log.Printf("response status code: %d, body: %s", resp.StatusCode, string(responseBody))
+}
+
+func TestSuccessfulDeviceRegistration(t *testing.T) {
+	stackOutput := NewStackOutputs()
+	deviceId := rand.IntN(1000)
+	requestBody := []byte(fmt.Sprintf(`{
+		"deviceId": "%d",
+		"deviceType": "sensor"
+		}`, deviceId))
+
+	log.Printf("POST %s", stackOutput.DeviceEndpoint)
+	log.Printf("deviceId: %d", deviceId)
+	resp, err := http.Post(stackOutput.DeviceEndpoint, "application/json", bytes.NewBuffer(requestBody))
+	if err != nil {
+		log.Fatalf("failure")
+	}
+	assert.Equal(t, resp.StatusCode, http.StatusCreated)
+
+	defer resp.Body.Close()
+	responseBody, _ := io.ReadAll(resp.Body)
+
+	log.Printf("response status code: %d, body: %s", resp.StatusCode, string(responseBody))
+}
+
+func newCloudformationClient() *cloudformation.Client {
+	cfg, err := config.LoadDefaultConfig(context.TODO())
+	if err != nil {
+		log.Fatalf("unable to load SDK config, %v", err)
+	}
+	return cloudformation.NewFromConfig(cfg)
 }
 
 func getFullStackName() string {

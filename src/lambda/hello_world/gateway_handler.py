@@ -2,7 +2,10 @@ import os
 
 import boto3
 from aws_lambda_powertools import Logger, Metrics
-from aws_lambda_powertools.event_handler import APIGatewayRestResolver
+from aws_lambda_powertools.event_handler import (
+    APIGatewayRestResolver,
+    Response,
+)
 from aws_lambda_powertools.event_handler.exceptions import NotFoundError
 from aws_lambda_powertools.logging import correlation_paths
 from aws_lambda_powertools.metrics.base import MetricUnit
@@ -68,10 +71,13 @@ def create_device(request: PostDeviceRequest) -> PostDeviceResponse:
     )
     metrics.add_metric(name=MetricNames.SUCCESS, unit=MetricUnit.Count, value=1)
 
-    return PostDeviceResponse(
-        certificate=keys_and_certificate["certificatePem"],
-        public_key=keys_and_certificate["keyPair"]["PublicKey"],
-        private_key=keys_and_certificate["keyPair"]["PrivateKey"],
+    return Response(
+        status_code=201,
+        body=PostDeviceResponse(
+            certificate=keys_and_certificate["certificatePem"],
+            public_key=keys_and_certificate["keyPair"]["PublicKey"],
+            private_key=keys_and_certificate["keyPair"]["PrivateKey"],
+        ).model_dump_json(),
     )
 
 
