@@ -4,6 +4,7 @@ WORKDIR /app
 
 COPY go.mod ./
 COPY *.go ./
+RUN go get .
 RUN CGO_ENABLED=0 GOOS=linux go build -o /go-server
 CMD ["/go-server"]
 
