@@ -5,13 +5,13 @@ use std::collections::HashMap;
 use std::time::Duration;
 use std::{io::Read, io::Write};
 
-pub struct Client {
+pub struct MqttClient {
     client: rumqttc::Client,
 }
 
-impl Client {
-    pub fn connect(mqtt_endpoint: String) -> Client {
-        return Client {
+impl MqttClient {
+    pub fn connect(mqtt_endpoint: String) -> MqttClient {
+        return MqttClient {
             client: connect(mqtt_endpoint),
         };
     }

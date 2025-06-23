@@ -5,9 +5,11 @@ use std::{io, io::Write};
 use sysinfo::System;
 mod iot;
 mod stack;
+mod ws;
 
 fn main() -> () {
-    let mut client_option: Option<iot::Client> = None;
+    let mut mqtt_client_option: Option<iot::MqttClient> = None;
+    let mut ws_client_option: Option<ws::WebSocketClient> = None;
     let stack = stack::Stack::new();
 
     loop {
@@ -26,28 +28,48 @@ fn main() -> () {
             }
             "register" => {
                 println!("Registering to server...");
-                iot::Client::register(
+                iot::MqttClient::register(
                     "rust-device".to_string(),
                     stack.device_registration_endpoint.clone(),
                 );
             }
-            "connect" => {
-                println!("Connecting to server...");
-                client_option = Some(iot::Client::connect(stack.iot_core_endpoint.clone()));
+            "connect iot" => {
+                println!("Connecting to mqtt server...");
+                mqtt_client_option =
+                    Some(iot::MqttClient::connect(stack.iot_core_endpoint.clone()));
+                println!("Connected to mqtt server")
+            }
+            "publish iot" => {
+                println!("Publishing message to mqtt server...");
+                if let Some(client) = mqtt_client_option.as_mut() {
+                    client.publish("hello/1/world", "hello");
+                    println!("Message published")
+                } else {
+                    println!("No client connected");
+                }
+            }
+            "connect ws" => {
+                println!("Connecting to ws server...");
+                ws_client_option = Some(ws::WebSocketClient::connect(
+                    "ws://localhost:8080".to_string(),
+                ));
+                println!("Connected to ws server")
+            }
+            "send ws" => {
+                println!("Sending message to ws server...");
+                if let Some(client) = ws_client_option.as_mut() {
+                    client.send("hello from rust device".to_string());
+                    println!("Message sent");
+                } else {
+                    println!("No client connected");
+                }
             }
             "post" => {
                 println!("Sending post request to server...");
                 let response = post_server();
                 println!("Response: {}", response);
             }
-            "publish" => {
-                println!("Sending publish request to server...");
-                if let Some(client) = client_option.as_mut() {
-                    client.publish("hello/1/world", "hello");
-                } else {
-                    println!("No client connected");
-                }
-            }
+
             "system" => {
                 let sytem = System::new_all();
 
