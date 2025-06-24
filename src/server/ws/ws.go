@@ -5,7 +5,6 @@ import (
 	"log"
 )
 
-
 type Client struct {
 	socketHub  *SocketHub
 	connection *websocket.Conn
@@ -41,7 +40,6 @@ func NewHub() *SocketHub {
 		broadcast: make(chan []byte),
 	}
 }
-
 
 func (c *Client) Write() {
 	for message := range c.send {

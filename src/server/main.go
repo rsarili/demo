@@ -1,10 +1,12 @@
 package main
 
 import (
-	"github.com/gorilla/websocket"
 	"log"
 	"net/http"
+	"server/storage"
 	"server/ws"
+
+	"github.com/gorilla/websocket"
 )
 
 var upgrader = websocket.Upgrader{
@@ -26,6 +28,10 @@ func serveWs(socketHub *ws.SocketHub, w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	socketHub := ws.NewHub()
+	clientStorage := storage.NewDeviceStorage()
+	clientStorage.AddDevice()
+	clientStorage.GetAllDevices()
+
 	go socketHub.Run()
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
