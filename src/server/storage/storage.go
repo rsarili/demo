@@ -55,18 +55,21 @@ func (cs *DeviceStorage) AddDevice() {
 	log.Printf("Record inserted, id: %s", deviceId)
 }
 
-func (cs *DeviceStorage) GetAllDevices() {
+func (cs *DeviceStorage) GetAllDevices() ([]Device, error) {
 	rows, err := cs.db.Query("SELECT device_id, device_type FROM devices")
 	if err != nil {
-		log.Fatal("Error executing query: ", err)
+		return nil, err
 	}
 	defer rows.Close()
 
+	devices := make([]Device, 0)
 	for rows.Next() {
-		var client Device
-		if err := rows.Scan(&client.Id, &client.Type); err != nil {
-			log.Fatal("Error querying the database: ", err)
+		var device Device
+		if err := rows.Scan(&device.Id, &device.Type); err != nil {
+			return nil, err
 		}
-		log.Println(client)
+		devices = append(devices, device)
 	}
+
+	return devices, nil
 }
