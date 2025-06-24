@@ -48,9 +48,7 @@ func (c *Client) Write() {
 }
 
 func (c *Client) Read() {
-	defer func() {
-		c.connection.Close()
-	}()
+	defer c.connection.Close()
 
 	c.connection.WriteMessage(websocket.TextMessage, []byte("Hello world"))
 
